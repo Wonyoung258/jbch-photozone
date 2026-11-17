@@ -4,23 +4,27 @@ import AVFoundation
 struct CustomCameraView: UIViewRepresentable {
     @ObservedObject var viewModel: CameraViewModel
 
-//    func makeUIView(context: Context) -> UIView {
-//        let coordinator = context.coordinator
-//        viewModel.captureAction = coordinator.takePicture
-//        let view = UIView()
-//        view.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height - 40)
-//        context.coordinator.setupCameraSession()
-//        return view
-//    }
-    func makeUIView(context: Context) -> UIView {
+    /// A view whose backing layer is the camera preview, so the preview always matches the
+    /// view's size. SwiftUI decides the size (TakePhotoView gives it the strip's window shape).
+    final class PreviewView: UIView {
+        override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
+        var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
+    }
+
+    func makeUIView(context: Context) -> PreviewView {
         let coordinator = context.coordinator
         viewModel.captureAction = coordinator.takePicture
-        let view = UIView(frame: UIScreen.main.bounds)
-        context.coordinator.setupCameraSession(for: view) // 뷰를 인자로 전달
+        let view = PreviewView()
+        view.backgroundColor = .black
+        coordinator.setupCameraSession(for: view)
         return view
     }
 
-    func updateUIView(_ uiView: UIView, context: Context) {}
+    func updateUIView(_ uiView: PreviewView, context: Context) {}
+
+    static func dismantleUIView(_ uiView: PreviewView, coordinator: Coordinator) {
+        coordinator.stopSession()
+    }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(viewModel: viewModel)
@@ -37,7 +41,15 @@ struct CustomCameraView: UIViewRepresentable {
 //            setupCameraSession()
         }
 
-        func setupCameraSession(for view: UIView) {
+        private let sessionQueue = DispatchQueue(label: "camera.session")
+
+        func stopSession() {
+            sessionQueue.async { [captureSession] in
+                captureSession.stopRunning()
+            }
+        }
+
+        func setupCameraSession(for view: PreviewView) {
             captureSession.sessionPreset = .photo
 
             guard let videoCaptureDevice = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front),
@@ -52,53 +64,38 @@ struct CustomCameraView: UIViewRepresentable {
                 captureSession.addOutput(photoOutput)
             }
 
-//            DispatchQueue.main.async {
-//                if let window = UIApplication.shared.windows.first(where: { $0.isKeyWindow }) {
-//                    let previewLayer = AVCaptureVideoPreviewLayer(session: self.captureSession)
-//                    previewLayer.frame = CGRect(x: 0, y: 0, width: window.bounds.width, height: window.bounds.height * (5/6))
-//                    previewLayer.videoGravity = .resizeAspectFill
-//                    window.layer.addSublayer(previewLayer)
-//                }
-//            }
-            let previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
-               previewLayer.frame = view.bounds // view의 bounds 사용
-               previewLayer.videoGravity = .resizeAspectFill
-               view.layer.addSublayer(previewLayer) // UIView의 layer에 추가
-            
-            captureSession.startRunning()
+            // Fill the window and crop the overflow, the same center crop StripRenderer applies to the photo.
+            view.previewLayer.session = captureSession
+            view.previewLayer.videoGravity = .resizeAspectFill
+
+            // startRunning() blocks, so keep it off the main thread.
+            sessionQueue.async { [captureSession] in
+                captureSession.startRunning()
+            }
         }
 
-        func takePicture() {
+        /// Returns false if the camera isn't ready, so the view model can retry the shot.
+        func takePicture() -> Bool {
+            guard let connection = photoOutput.connection(with: .video),
+                  connection.isEnabled,
+                  connection.isActive else {
+                print("Camera is not ready. No active video connection.")
+                return false
+            }
+
             let settings = AVCapturePhotoSettings()
             photoOutput.capturePhoto(with: settings, delegate: self)
+            return true
         }
-
 
         func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
             // 캡처된 사진의 데이터를 UIImage로 변환합니다.
             guard let imageData = photo.fileDataRepresentation(), let image = UIImage(data: imageData) else { return }
-            
-            
+
+            // 좌우 반전 후 뷰모델에 전달 (4장이 모이면 뷰모델이 결과를 발행)
+            let mirrored = image.withHorizontallyFlippedOrientation() ?? image
             DispatchQueue.main.async {
-                // 캡처 카운트를 체크하여 4미만인 경우에만 이미지를 추가합니다.
-                guard self.viewModel.captureCount < 4 else {
-                    // 이미 4장의 사진을 캡처했다면, 타이머를 종료하고 이미지 합치기 작업을 진행합니다.
-                    self.viewModel.timer?.invalidate()
-                    self.viewModel.timer = nil
-                    self.viewModel.mergedImage = self.viewModel.mergeImages()
-                    return
-                }
-                
-                // 캡처된 이미지를 좌우 반전시킨 후 배열에 추가합니다.
-                      if let flippedImage = image.withHorizontallyFlippedOrientation() {
-                          self.viewModel.capturedImages.append(flippedImage)
-                      }
-                self.viewModel.captureCount += 1
-                
-                // 4장의 이미지가 모두 캡처되었는지 다시 확인하고, 모두 캡처되었다면 이미지를 합치는 작업을 진행합니다.
-                if self.viewModel.capturedImages.count == 4 {
-                    self.viewModel.mergedImage = self.viewModel.mergeImages()
-                }
+                self.viewModel.didCapture(mirrored)
             }
         }
 

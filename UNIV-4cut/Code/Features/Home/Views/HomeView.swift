@@ -1,20 +1,16 @@
 import SwiftUI
 
-// Home View : 로고, 촬영하기 버튼
+// Home View (iPad): title/image + Take Photo button
 struct HomeView: View {
     var body: some View {
         NavigationView {
             VStack {
                 Spacer()
-                // logo image
-                Image("logo")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 400, height: 400)
+                HomeHeroView(titleSize: 72, imageSize: 400)
                 Spacer()
-                // 촬영하기 버튼 -> 온보딩 뷰로 이동 : 네비게이션 링크 방식
+                // Take Photo -> onboarding
                 NavigationLink(destination: OnboardingView()) {
-                    Text("촬영하기")
+                    Text("Take Photo")
                         .foregroundColor(.white)
                         .frame(width: 200, height: 50)
                         .background(Color.black)
@@ -24,6 +20,34 @@ struct HomeView: View {
             }
         }
         .navigationViewStyle(StackNavigationViewStyle()) // Stack View Style
+    }
+}
+
+/// Centerpiece of the home screen, shared by the iPad and iPhone layouts.
+/// Shows the `home_hero` image once it is added to Assets.xcassets; until then shows the title text.
+struct HomeHeroView: View {
+    static let imageName = "home_hero"
+    static let title = "JBCH PHOTOZONE"
+
+    var titleSize: CGFloat
+    var imageSize: CGFloat
+
+    var body: some View {
+        if let image = UIImage(named: Self.imageName) {
+            Image(uiImage: image)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(maxWidth: imageSize, maxHeight: imageSize)
+                .accessibilityLabel(Self.title)
+        } else {
+            Text(Self.title)
+                .font(.custom("Pretendard-ExtraBold", size: titleSize))
+                .foregroundColor(.black)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.5)
+                .padding(.horizontal, 24)
+        }
     }
 }
 

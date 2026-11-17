@@ -26,7 +26,7 @@ class ResultViewModel: ObservableObject {
         isFirst = true
             // 프레임 이미지 로드
             guard let frameImage = UIImage(named: "4cut_frame") else {
-                print("프레임 이미지를 불러올 수 없습니다.")
+                print("Couldn't load the frame image.")
                 return nil
             }
             
@@ -96,7 +96,9 @@ class ResultViewModel: ObservableObject {
     func saveImageToAlbum(image: UIImage, completion: @escaping (Bool, Error?) -> Void) {
         PHPhotoLibrary.requestAuthorization { status in
             guard status == .authorized else {
-                completion(false, NSError(domain: "PhotoLibraryAccessDenied", code: 1, userInfo: nil))
+                DispatchQueue.main.async {
+                    completion(false, NSError(domain: "PhotoLibraryAccessDenied", code: 1, userInfo: nil))
+                }
                 return
             }
 
@@ -108,5 +110,116 @@ class ResultViewModel: ObservableObject {
                 }
             }
         }
+    }
+}
+
+// MARK: - Printing
+
+/// Prints strips over AirPrint (e.g. an Epson PictureMate PM-400 on the same Wi-Fi).
+///
+/// The first print asks which printer to use and remembers it. Later prints go straight to that
+/// printer with no dialog, so guests only tap Print.
+final class StripPrinter: NSObject, UIPrintInteractionControllerDelegate {
+    static let shared = StripPrinter()
+
+    enum Outcome {
+        case sent
+        case cancelled
+        /// The remembered printer didn't answer (off, asleep, or on another network).
+        case printerUnavailable
+        case failed(String)
+    }
+
+    private static let savedPrinterKey = "savedPrinterURL"
+    /// 4×6 inch paper in points (72 pt per inch).
+    private static let paperSize = CGSize(width: 4 * 72, height: 6 * 72)
+
+    private var savedPrinter: UIPrinter? {
+        guard let string = UserDefaults.standard.string(forKey: Self.savedPrinterKey),
+              let url = URL(string: string) else { return nil }
+        return UIPrinter(url: url)
+    }
+
+    /// Prints two copies of `strip` side by side on 4×6 paper.
+    /// - Parameter choosePrinter: true to show the printer picker even if a printer is remembered.
+    func print(strip: UIImage, choosePrinter: Bool = false, completion: @escaping (Outcome) -> Void) {
+        let sheet = StripRenderer.renderPrintSheet(strip: strip)
+
+        if !choosePrinter, let printer = savedPrinter {
+            printer.contactPrinter { available in
+                DispatchQueue.main.async {
+                    if available {
+                        self.send(sheet, to: printer, completion: completion)
+                    } else {
+                        completion(.printerUnavailable)
+                    }
+                }
+            }
+            return
+        }
+
+        pickPrinter { printer in
+            guard let printer else {
+                completion(.cancelled)
+                return
+            }
+            UserDefaults.standard.set(printer.url.absoluteString, forKey: Self.savedPrinterKey)
+            self.send(sheet, to: printer, completion: completion)
+        }
+    }
+
+    private func pickPrinter(completion: @escaping (UIPrinter?) -> Void) {
+        let picker = UIPrinterPickerController(initiallySelectedPrinter: savedPrinter)
+        let handler: UIPrinterPickerController.CompletionHandler = { picker, userDidSelect, _ in
+            completion(userDidSelect ? picker.selectedPrinter : nil)
+        }
+
+        // On iPad the picker is a popover and needs something to point at.
+        if UIDevice.current.userInterfaceIdiom == .pad, let view = Self.topViewController()?.view {
+            let anchor = CGRect(x: view.bounds.midX, y: view.bounds.maxY - 80, width: 1, height: 1)
+            picker.present(from: anchor, in: view, animated: true, completionHandler: handler)
+        } else {
+            picker.present(animated: true, completionHandler: handler)
+        }
+    }
+
+    private func send(_ sheet: UIImage, to printer: UIPrinter, completion: @escaping (Outcome) -> Void) {
+        let printInfo = UIPrintInfo.printInfo()
+        printInfo.outputType = .photo // photo paper and photo quality
+        printInfo.orientation = .portrait
+        printInfo.jobName = "JBCH Photozone"
+
+        let controller = UIPrintInteractionController.shared
+        controller.printInfo = printInfo
+        controller.printingItem = sheet
+        controller.delegate = self
+
+        controller.print(to: printer) { _, completed, error in
+            DispatchQueue.main.async {
+                if let error {
+                    completion(.failed(error.localizedDescription))
+                } else {
+                    completion(completed ? .sent : .cancelled)
+                }
+            }
+        }
+    }
+
+    /// Ask the printer for 4×6 paper. The sheet image is already 2:3, so it fills the page.
+    func printInteractionController(_ printInteractionController: UIPrintInteractionController,
+                                    choosePaper paperList: [UIPrintPaper]) -> UIPrintPaper {
+        UIPrintPaper.bestPaper(forPageSize: Self.paperSize, withPapersFrom: paperList)
+    }
+
+    private static func topViewController() -> UIViewController? {
+        let window = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first(where: \.isKeyWindow)
+        var top = window?.rootViewController
+        while let presented = top?.presentedViewController {
+            top = presented
+        }
+        return top
     }
 }

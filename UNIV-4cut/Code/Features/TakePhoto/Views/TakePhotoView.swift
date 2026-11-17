@@ -3,66 +3,71 @@ import SwiftUI
 struct TakePhotoView: View {
     @StateObject var cameraViewModel = CameraViewModel()
     @State private var isPresentingResultView = false
-    
+
+    /// Same shape as each photo window in the strip, so the preview shows exactly what gets saved.
+    private var windowAspectRatio: CGFloat {
+        StripLayout.photoSize.width / StripLayout.photoSize.height
+    }
+
     var body: some View {
         ZStack {
-            // 카메라 뷰를 배경으로 설정
-            CustomCameraView(viewModel: cameraViewModel)
-            
-            VStack {
-                if cameraViewModel.remainingTime > 0 {
-                    VStack{
-                        
-                        Text("남은 시간")
-                            .font(.custom("Pretendard-SemiBold", size: 40))
-                            .foregroundColor(.black)
-                            .padding(.top,40)
+            Color.black.ignoresSafeArea()
+
+            VStack(spacing: 24) {
+                // Countdown
+                VStack(spacing: 4) {
+                    if cameraViewModel.remainingTime > 0 {
+                        Text("Next photo in")
+                            .font(.custom("Pretendard-SemiBold", size: 28))
                         Text("\(cameraViewModel.remainingTime)")
-                            .font(.custom("Pretendard-SemiBold", size: 100))
-                            .foregroundColor(.black)
-
+                            .font(.custom("Pretendard-SemiBold", size: 96))
+                            .monospacedDigit()
+                    } else {
+                        Text("📸")
+                            .font(.system(size: 96))
+                            .padding(.top, 36)
                     }
-            
-                } else {
-                    Text("📸")
-                        .font(.title)
-                        .padding()
                 }
-                Spacer() // 상단 여백 생성
-                Text("\(cameraViewModel.capturedImages.count)/4")
-                    .foregroundColor(.white)
+                .foregroundColor(.white)
+                .frame(height: 150)
+
+                // Camera preview, masked to the strip's window shape
+                CustomCameraView(viewModel: cameraViewModel)
+                    .aspectRatio(windowAspectRatio, contentMode: .fit)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.white.opacity(0.8), lineWidth: 3)
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.horizontal, 16)
+
+                // Progress
+                Text("\(cameraViewModel.capturedImages.count)/\(CameraViewModel.photosPerSession)")
+                    .foregroundColor(.black)
                     .font(.custom("Pretendard-SemiBold", size: 30))
-                    .padding()
-                    .padding(.horizontal,17)
-                    .background(Color.black.opacity(0.9))
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 32)
+                    .background(Color.white)
                     .cornerRadius(36)
-                    .padding(.bottom, 40) // 상단 Safe Area를 고려한 여백 추가
-                // 타이머 표시
-
+                    .padding(.bottom, 24)
             }
-            .foregroundColor(.white)
-
         }
         .onAppear {
             cameraViewModel.startCapturing()
         }
-        .fullScreenCover(isPresented: $isPresentingResultView) {
-            // ResultView에 mergedImage가 nil인 경우에 대한 처리를 추가합니다.
-            if let exampleImage = UIImage(named: "4cut_example") {
-                ResultView(mergedImage: cameraViewModel.mergedImage ?? exampleImage)
-            } else {
-                ResultView(mergedImage: UIImage())
-            }
-            
+        .onDisappear {
+            cameraViewModel.stopTimer()
         }
-        .onChange(of: cameraViewModel.mergedImage) { _ in
-            // mergedImage의 상태 변화가 감지되면, isPresentingResultView를 true로 설정하여 sheet를 표시합니다.
-            print(cameraViewModel.mergedImage)
-            isPresentingResultView = cameraViewModel.mergedImage != nil
+        .fullScreenCover(isPresented: $isPresentingResultView) {
+            ResultView(photos: cameraViewModel.finalPhotos ?? [])
+        }
+        .onChange(of: cameraViewModel.finalPhotos) { photos in
+            // Show the result screen once all photos are taken
+            isPresentingResultView = photos != nil
         }
     }
 }
-
 
 // SwiftUI 미리보기
 struct TakePhotoView_Previews: PreviewProvider {

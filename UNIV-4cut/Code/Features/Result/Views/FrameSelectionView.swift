@@ -1,37 +1,53 @@
 import SwiftUI
 
+/// Row of tappable swatches, one per entry in `PhotoFrame.all`.
+/// Frames with artwork show a thumbnail of it, others show their background color.
 struct FrameSelectionView: View {
     @Binding var selectedFrameIndex: Int
-    
+
     var body: some View {
-        HStack(alignment: .center, spacing: 30) {
-            ForEach(0..<4) { index in
-                Circle()
-                    .frame(width: 50, height: 60)
-                    .foregroundColor(frameColor(for: index))
-                    .overlay(
-                        Circle()
-                            .stroke(selectedFrameIndex == index ? .grayUniv : Color.clear, lineWidth: 3)
-                    )
-                    .onTapGesture {
-                        selectedFrameIndex = index
-                    }
-            }
+        // Centered when all swatches fit, scrollable when there are too many.
+        ViewThatFits(in: .horizontal) {
+            swatchRow
+            ScrollView(.horizontal, showsIndicators: false) { swatchRow }
         }
+        .frame(height: 70)
     }
-    
-    private func frameColor(for index: Int) -> Color {
-        switch index {
-        case 0:
-            return .skyBlueUniv
-        case 1:
-            return .mintUniv
-        case 2:
-            return .black
-        case 3:
-            return .white
-        default:
-            return .clear
+
+    private var swatchRow: some View {
+            HStack(spacing: 20) {
+                ForEach(Array(PhotoFrame.all.enumerated()), id: \.element.id) { index, frame in
+                    swatch(for: frame)
+                        .frame(width: 50, height: 50)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(Color.gray.opacity(0.3), lineWidth: 1))
+                        .overlay(
+                            Circle()
+                                .stroke(Color.grayUniv, lineWidth: 3)
+                                .padding(-5)
+                                .opacity(selectedFrameIndex == index ? 1 : 0)
+                        )
+                        .padding(6)
+                        .contentShape(Circle())
+                        .onTapGesture { selectedFrameIndex = index }
+                        .accessibilityLabel(frame.id)
+                        .accessibilityAddTraits(selectedFrameIndex == index ? .isSelected : [])
+                }
+            }
+            .padding(.horizontal, 8)
+    }
+
+    @ViewBuilder
+    private func swatch(for frame: PhotoFrame) -> some View {
+        if let artwork = frame.overlayImage {
+            ZStack {
+                Color(frame.backgroundColor)
+                Image(uiImage: artwork)
+                    .resizable()
+                    .scaledToFill()
+            }
+        } else {
+            Color(frame.backgroundColor)
         }
     }
 }

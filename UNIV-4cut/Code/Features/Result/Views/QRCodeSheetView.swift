@@ -9,7 +9,7 @@ struct QRCodeSheetView: View {
         if let qrImage = viewModel.qrCodeImage {
             VStack {
                 Spacer()
-                Text("사진은 3시간 뒤에 만료됩니다! 꼭 바로 다운받아주세요")
+                Text("Your photo expires in 3 hours. Scan and download it now!")
                     .font(.custom("Pretendard-SemiBold", size: 20))
                 Spacer()
                 Image(uiImage: qrImage)
@@ -18,7 +18,7 @@ struct QRCodeSheetView: View {
                     .scaledToFit()
                     .scaleEffect(0.6)
                 Spacer()
-                Button("홈으로") {
+                Button("Back to Home") {
                     showingQRView = false
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         showingHomeView = true
@@ -34,7 +34,7 @@ struct QRCodeSheetView: View {
                 }
             }
         } else {
-            Text("QR 코드 생성 중...")
+            Text("Generating QR code...")
                 .font(.custom("Pretendard-SemiBold", size: 20))
         }
     }

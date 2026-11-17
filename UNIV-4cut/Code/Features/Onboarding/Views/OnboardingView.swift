@@ -7,13 +7,13 @@ struct OnboardingView: View {
     @Environment(\.presentationMode) var presentationMode: Binding<PresentationMode>
     
     // 상수 선언
-    private let titleText = "찍기전에 보고 갈까요?!"
+    private let titleText = "Before you start!"
     private let iconTexts = [
-        ("cloud", "타이머는 6초입니다!"),
-        ("cloud.fill", "촬영 기회는 딱 한번! 예쁘게 찍어봐요!."),
-        ("cloud", "사진 촬영은 총 4번 됩니다."),
-        ("cloud.fill", "촬영하기를 누르면 바로 촬영이 시작돼요!"),
-        ("camera", "촬영 완료 후 아래 4가지 프레임 중 1가지를 선택할 수 있어요!")
+        ("cloud", "There is a 6-second timer before each photo."),
+        ("cloud.fill", "You only get one take, so strike your best pose!"),
+        ("cloud", "4 photos will be taken in total."),
+        ("cloud.fill", "The countdown starts as soon as you tap Take Photo."),
+        ("camera", "When you are done, choose a frame for your photo strip.")
     ]
     private let frameImageName = "4cut_exmaple_onboarding"
     
@@ -26,7 +26,7 @@ struct OnboardingView: View {
                 Image(systemName: "chevron.left") // 화살표 이미지
                     .aspectRatio(contentMode: .fit)
                     .foregroundColor(Color.black)
-                Text("뒤로")
+                Text("Back")
                     .foregroundColor(Color.black)
             }
         }
@@ -43,7 +43,7 @@ struct OnboardingView: View {
             
             // 아이콘과 텍스트 리스트
             VStack(alignment: .leading, spacing: 10) {
-                ForEach(iconTexts, id: \.0) { iconName, text in
+                ForEach(iconTexts, id: \.1) { iconName, text in
                     IconTextComponent(iconName: iconName, text: text)
                 }
             }
@@ -55,14 +55,14 @@ struct OnboardingView: View {
                     .aspectRatio(contentMode: .fit)
                     .scaleEffect(0.9)
             } else {
-                Text("프레임 이미지를 불러올 수 없습니다.")
+                Text("Couldn't load the example image.")
                     .foregroundColor(.red)
             }
             
             Spacer()
             
             // "촬영하기" 버튼
-            Button("촬영하기") {
+            Button("Take Photo") {
                 showingTakePhotoView = true
             }
             .foregroundColor(.white)
@@ -84,9 +84,9 @@ struct OnboardingView: View {
     func requestCameraPermission() {
         AVCaptureDevice.requestAccess(for: .video) { granted in
             if granted {
-                print("카메라 접근 허용됨")
+                print("Camera access granted")
             } else {
-                print("카메라 접근 거부됨")
+                print("Camera access denied")
             }
         }
     }

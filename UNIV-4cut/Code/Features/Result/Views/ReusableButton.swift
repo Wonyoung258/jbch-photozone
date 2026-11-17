@@ -9,6 +9,9 @@ struct ReusableButton: View {
         Button(action: action) {
             Text(title)
                 .font(.system(size: 18, weight: .bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .padding(.horizontal, 4)
                 .foregroundColor(.white)
                 .frame(width: boxWidth, height: 50)
                 .background(Color.black)
@@ -19,7 +22,7 @@ struct ReusableButton: View {
 
 struct ReusableButton_Previews: PreviewProvider {
     static var previews: some View {
-        ReusableButton(title: "홈으로") {
+        ReusableButton(title: "Back to Home") {
             print("Button pressed")
         }
     }

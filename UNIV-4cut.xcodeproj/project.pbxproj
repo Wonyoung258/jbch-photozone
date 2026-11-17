@@ -588,14 +588,14 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"UNIV-4cut/Preview Content\"";
-				DEVELOPMENT_TEAM = Y2M459JK4X;
+				DEVELOPMENT_TEAM = D974Z6339P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "UNIV-4cut/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "나만의 네컷";
+				INFOPLIST_KEY_CFBundleDisplayName = "JBCH Photozone";
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
-				INFOPLIST_KEY_NSCameraUsageDescription = "카메라 사용을 허용하시겠습니까?";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "사진을 허용하시겠습니까?";
+				INFOPLIST_KEY_NSCameraUsageDescription = "The camera is used to take your photo booth pictures.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photo library access is used to save your photo strip.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -607,7 +607,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.9oormthonUNIV.UNIV--4cut";
+				PRODUCT_BUNDLE_IDENTIFIER = com.wykim.univ4cut;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -623,14 +623,14 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"UNIV-4cut/Preview Content\"";
-				DEVELOPMENT_TEAM = Y2M459JK4X;
+				DEVELOPMENT_TEAM = D974Z6339P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "UNIV-4cut/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "나만의 네컷";
+				INFOPLIST_KEY_CFBundleDisplayName = "JBCH Photozone";
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
-				INFOPLIST_KEY_NSCameraUsageDescription = "카메라 사용을 허용하시겠습니까?";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "사진을 허용하시겠습니까?";
+				INFOPLIST_KEY_NSCameraUsageDescription = "The camera is used to take your photo booth pictures.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photo library access is used to save your photo strip.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -642,7 +642,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.9oormthonUNIV.UNIV--4cut";
+				PRODUCT_BUNDLE_IDENTIFIER = com.wykim.univ4cut;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
