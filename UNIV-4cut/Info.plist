@@ -10,6 +10,19 @@
 		<string>Pretendard-ExtraBold.otf</string>
 		<string>Pretendard-SemiBold.otf</string>
 		<string>Pretendard-ExtraLight.otf</string>
+		<string>DMSans-Regular.ttf</string>
+		<string>DMSans-Medium.ttf</string>
+		<string>DMSans-SemiBold.ttf</string>
+		<string>DMSans-Bold.ttf</string>
+		<string>IBMPlexSansKR-Bold.ttf</string>
+		<string>Neuton-Regular.ttf</string>
+		<string>Neuton-Bold.ttf</string>
+		<string>Neuton-Italic.ttf</string>
+		<string>IBMPlexSansKR-Regular.ttf</string>
+		<string>IBMPlexSansKR-Medium.ttf</string>
+		<string>IBMPlexSansKR-SemiBold.ttf</string>
+		<string>GowunBatang-Regular.ttf</string>
+		<string>GowunBatang-Bold.ttf</string>
 	</array>
 </dict>
 </plist>

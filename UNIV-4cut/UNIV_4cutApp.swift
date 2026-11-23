@@ -6,6 +6,7 @@ struct UNIV_4cutApp: App {
     // 파베 초기화
     init() {
          FirebaseApp.configure()
+         SoundPlayer.shared.preload()
      }
     
     var body: some Scene {

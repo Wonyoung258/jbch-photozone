@@ -134,22 +134,27 @@ final class StripPrinter: NSObject, UIPrintInteractionControllerDelegate {
     /// 4×6 inch paper in points (72 pt per inch).
     private static let paperSize = CGSize(width: 4 * 72, height: 6 * 72)
 
+    /// True once a printer has been chosen on this iPad (so printing needs no dialog).
+    var hasSavedPrinter: Bool { savedPrinter != nil }
+
     private var savedPrinter: UIPrinter? {
         guard let string = UserDefaults.standard.string(forKey: Self.savedPrinterKey),
               let url = URL(string: string) else { return nil }
         return UIPrinter(url: url)
     }
 
-    /// Prints two copies of `strip` side by side on 4×6 paper.
+    /// Prints `copies` strips, two side by side per 4×6 sheet (so 2, 4, 6 copies = 1, 2, 3 sheets).
     /// - Parameter choosePrinter: true to show the printer picker even if a printer is remembered.
-    func print(strip: UIImage, choosePrinter: Bool = false, completion: @escaping (Outcome) -> Void) {
+    func print(strip: UIImage, copies: Int = 2, choosePrinter: Bool = false,
+               completion: @escaping (Outcome) -> Void) {
         let sheet = StripRenderer.renderPrintSheet(strip: strip)
+        let sheets = max(1, (copies + 1) / 2)
 
         if !choosePrinter, let printer = savedPrinter {
             printer.contactPrinter { available in
                 DispatchQueue.main.async {
                     if available {
-                        self.send(sheet, to: printer, completion: completion)
+                        self.send(sheet, sheets: sheets, to: printer, completion: completion)
                     } else {
                         completion(.printerUnavailable)
                     }
@@ -164,7 +169,7 @@ final class StripPrinter: NSObject, UIPrintInteractionControllerDelegate {
                 return
             }
             UserDefaults.standard.set(printer.url.absoluteString, forKey: Self.savedPrinterKey)
-            self.send(sheet, to: printer, completion: completion)
+            self.send(sheet, sheets: sheets, to: printer, completion: completion)
         }
     }
 
@@ -183,15 +188,16 @@ final class StripPrinter: NSObject, UIPrintInteractionControllerDelegate {
         }
     }
 
-    private func send(_ sheet: UIImage, to printer: UIPrinter, completion: @escaping (Outcome) -> Void) {
+    private func send(_ sheet: UIImage, sheets: Int, to printer: UIPrinter, completion: @escaping (Outcome) -> Void) {
         let printInfo = UIPrintInfo.printInfo()
         printInfo.outputType = .photo // photo paper and photo quality
         printInfo.orientation = .portrait
-        printInfo.jobName = "JBCH Photozone"
+        printInfo.jobName = "Eternal Life 4 Cuts"
 
         let controller = UIPrintInteractionController.shared
         controller.printInfo = printInfo
-        controller.printingItem = sheet
+        // One page per sheet; each page holds two strips.
+        controller.printingItems = Array(repeating: sheet, count: sheets)
         controller.delegate = self
 
         controller.print(to: printer) { _, completed, error in

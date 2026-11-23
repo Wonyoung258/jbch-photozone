@@ -1,26 +1,31 @@
-//
-//  ContentView.swift
-//  ddd
-//
-//  Created by 서희찬 on 3/16/24.
-//
-
 import SwiftUI
 
+/// Shows the screen for the current step of the booth session.
 struct ContentView: View {
+    @StateObject private var session = BoothSession()
+
     var body: some View {
-        GeometryReader { geometry in
-            if geometry.size.width > 600 {
-                // iPad 레이아웃
-                HomeView()
-            } else {
-                // iPhone 레이아웃
-                MobileHomeView()
+        ZStack {
+            PaperBackground()
+
+            switch session.step {
+            case .landing:
+                HomeView().transition(.opacity)
+            case .setup:
+                SetupView().transition(.opacity)
+            case .camera:
+                TakePhotoView().transition(.opacity)
+            case .frame:
+                FramePickerView(photos: session.photos).transition(.opacity)
+            case .result:
+                ResultView(photos: session.photos).transition(.opacity)
             }
         }
+        .environmentObject(session)
+        // Slightly tighter letter spacing for all text in the app.
+        .tracking(AppFont.defaultTracking)
     }
 }
-
 
 #Preview {
     ContentView()

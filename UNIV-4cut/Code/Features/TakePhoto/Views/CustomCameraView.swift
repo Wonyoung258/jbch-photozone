@@ -84,6 +84,11 @@ struct CustomCameraView: UIViewRepresentable {
             }
 
             let settings = AVCapturePhotoSettings()
+            // The app plays its own shutter sound (SoundEffect.shutter), so mute the system one
+            // where iOS allows it (iOS 18+, and not in regions that require the shutter sound).
+            if #available(iOS 18.0, *), photoOutput.isShutterSoundSuppressionSupported {
+                settings.isShutterSoundSuppressionEnabled = true
+            }
             photoOutput.capturePhoto(with: settings, delegate: self)
             return true
         }

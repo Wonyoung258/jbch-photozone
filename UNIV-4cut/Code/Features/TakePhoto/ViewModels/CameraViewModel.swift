@@ -23,6 +23,7 @@ class CameraViewModel: ObservableObject {
         capturedImages.removeAll()
         finalPhotos = nil
         remainingTime = Self.countdownSeconds
+        playTick()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             self?.tick()
         }
@@ -32,12 +33,14 @@ class CameraViewModel: ObservableObject {
     private func tick() {
         if remainingTime > 1 {
             remainingTime -= 1
+            playTick()
             return
         }
 
         if remainingTime == 1 {
             remainingTime = 0
             if captureAction?() == true {
+                SoundEffect.shutter.play()
                 shotsTaken += 1
                 if shotsTaken >= Self.photosPerSession {
                     stopTimer()
@@ -49,6 +52,12 @@ class CameraViewModel: ObservableObject {
 
         // remainingTime == 0: the shot just happened, start the next countdown.
         remainingTime = Self.countdownSeconds
+        playTick()
+    }
+
+    /// Beep for the number now on screen; higher for the last three seconds.
+    private func playTick() {
+        (remainingTime <= 3 ? SoundEffect.tickFinal : SoundEffect.tick).play()
     }
 
     /// Called by the camera on the main thread with each finished photo.

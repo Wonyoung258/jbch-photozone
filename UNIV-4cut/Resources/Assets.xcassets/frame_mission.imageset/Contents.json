@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "frame_mission.png",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

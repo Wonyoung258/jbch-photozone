@@ -272,32 +272,38 @@ Guest/hotel Wi-Fi often blocks devices from seeing each other. If the printer do
 
 ## 12. Customizing frames and the home screen
 
-### Home screen image
+### How a guest uses the booth
 
-The home screen shows the text **"JBCH PHOTOZONE"**. To show an image instead, add it to `UNIV-4cut/Resources/Assets.xcassets` with the name **`home_hero`** (drag the image into the asset catalog in Xcode and rename it). No code change is needed.
+1. **Landing:** the 영생네컷 logo, the animated "Eternal Life 4 Cuts / 영생네컷" title, and **English** / **한국어** buttons. The chosen language is used on every screen after that.
+2. **Choose a frame**, then **choose how many prints** (2, 4 or 6 strips; two strips fit on each 4×6 sheet, so that's 1, 2 or 3 sheets).
+3. **Take photos:** 4 photos on a 6-second countdown.
+4. **Result:** QR code, Save, and Print (prints the number chosen in step 2). The ✕ button goes back to the landing screen.
+
+The logo is the `eternal_life_logo` image in `Assets.xcassets`. To change it, replace that image (keep the name).
 
 ### Frame artwork
 
-Frames are listed in `PhotoFrame.all` in `UNIV-4cut/Code/Utilities/Result/ImageProcessor.swift`. They're currently plain colors. To add a designed frame:
+Frames are listed in `PhotoFrame.all` in `UNIV-4cut/Code/Utilities/Result/ImageProcessor.swift`. To add a designed frame:
 
 1. Create a **1200 × 3600 px PNG** with **transparent windows** where the photos go:
 
    | Photo | x | y | width × height |
    |---|---|---|---|
-   | 1 | 80 | 80 | 1040 × 780 |
-   | 2 | 80 | 900 | 1040 × 780 |
-   | 3 | 80 | 1720 | 1040 × 780 |
-   | 4 | 80 | 2540 | 1040 × 780 |
+   | 1 | 52 | 51 | 1096 × 726 |
+   | 2 | 52 | 825 | 1096 × 726 |
+   | 3 | 52 | 1599 | 1096 × 726 |
+   | 4 | 52 | 2373 | 1096 × 726 |
 
-   The bottom area (y = 3320 to 3600) is free for logos and decoration.
+   The bottom area (y = 3099 to 3600) is free for the logo. `frame_winter` in `Assets.xcassets` is a working example.
 2. Add the PNG to `Assets.xcassets`, e.g. named `strip_blossom`.
-3. Add one line to `PhotoFrame.all`:
+3. Add one line to `PhotoFrame.all` (the first frame in the list is selected by default):
 
    ```swift
-   PhotoFrame(id: "blossom", backgroundColor: .white, overlayImageName: "strip_blossom"),
+   PhotoFrame(id: "blossom", name: "Blossom", nameKO: "벚꽃",
+              backgroundColor: .white, overlayImageName: "strip_blossom"),
    ```
 
-It automatically appears as a choice on the result screen and is used for saving, QR, and printing.
+It automatically appears on the frame selection screen and is used for saving, QR, and printing. Frames without artwork (`overlayImageName` left out) are a plain color with the 영생네컷 logo in the footer.
 
 ### Other settings
 
@@ -306,6 +312,9 @@ It automatically appears as a choice on the result screen and is used for saving
 | Countdown length (default 6 s) | `CameraViewModel.countdownSeconds` in `CameraViewModel.swift` |
 | App name on the home screen | Target → **General → Display Name** in Xcode |
 | Print job name | `StripPrinter.send` in `ResultViewModel.swift` |
+| On-screen text (English / Korean) | `UNIV-4cut/Code/Design/Strings.swift` |
+| Colors, fonts, button styles | `UNIV-4cut/Code/Design/Theme.swift` |
+| Print quantity options (2 / 4 / 6) | `BoothSession.printOptions` in `BoothSession.swift` |
 
 ---
 
@@ -335,20 +344,23 @@ It automatically appears as a choice on the result screen and is used for saving
 ```
 UNIV-4cut/
 ├── UNIV_4cutApp.swift          App entry point, configures Firebase
-├── ContentView.swift           Picks the iPad or iPhone home layout
+├── ContentView.swift           Shows the screen for the current step (landing → setup → camera → result)
 ├── GoogleService-Info.plist    Your Firebase config (not in git; you add it)
 ├── Code/
+│   ├── Design/
+│   │   ├── Theme.swift         Colors, fonts, button styles, AppLanguage
+│   │   └── Strings.swift       All on-screen text in English and Korean
 │   ├── Features/
-│   │   ├── Home/               Home screen ("JBCH PHOTOZONE" / home_hero image)
-│   │   ├── Onboarding/         Instructions before shooting, camera permission
+│   │   ├── Home/               Landing screen: logo, animated title, language picker
+│   │   ├── Setup/              Frame + print quantity choice, tips, camera permission; BoothSession (flow state)
 │   │   ├── TakePhoto/          Camera preview, 6-second countdown, captures 4 photos
-│   │   └── Result/             Strip preview, frame picker, Home / QR / Save / Print
+│   │   └── Result/             Finished strip, QR / Save / Print; frame picker used by Setup
 │   └── Utilities/Result/
 │       └── ImageProcessor.swift  Strip layout, frames (PhotoFrame), strip + print-sheet rendering
 └── Resources/
     ├── Assets.xcassets         Images, app icon
     ├── Colors.xcassets         Brand colors
-    └── Fonts/                  Pretendard font
+    └── Fonts/                  DM Sans + Neuton (English), IBM Plex Sans KR + Gowun Batang (Korean)
 ```
 
 **Dependencies:** [Firebase iOS SDK](https://github.com/firebase/firebase-ios-sdk) 10.x via Swift Package Manager. Only **Firebase Storage** is used at runtime; you don't need to enable Firestore, Realtime Database, or Analytics.

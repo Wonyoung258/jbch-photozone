@@ -1,64 +1,63 @@
 import SwiftUI
 
+/// Result screen actions: Save, and Print (with the chosen quantity) below it.
+/// When `timeUp` turns true (stage timer ran out), prints if the guest hasn't yet, then goes home.
 struct ButtonActionView: View {
+    @EnvironmentObject private var session: BoothSession
+    @AppStorage(AppLanguage.storageKey) private var language: AppLanguage = .english
     @ObservedObject var viewModel: ResultViewModel
-    @Binding var showingHomeView: Bool
-    @Binding var showingQRView: Bool
-
-    @State private var activeAlert: ActiveAlert?
-    @State private var isPrinting = false
 
     /// The finished strip (photos + selected frame), exactly as shown on screen.
     let stripImage: UIImage
+    let metrics: Metrics
+    var timeUp = false
+    /// Called when the photos reach the printer (shows the thank-you screen).
+    var onPrinted: () -> Void = {}
 
-    private let buttonWidth: CGFloat = 90
+    @State private var activeAlert: ActiveAlert?
+    @State private var isPrinting = false
+    @State private var hasPrinted = false
+    /// Set when time runs out mid-print: go home as soon as the print finishes.
+    @State private var goHomeAfterPrint = false
+
+    private var strings: AppStrings { language.strings }
+    private var font: Font { AppFont.body(metrics.buttonText, language, weight: .semibold) }
 
     var body: some View {
-        HStack(alignment: .center) {
-            Spacer()
-            ReusableButton(title: "Home", action: {
-                showingHomeView = true
-            }, boxWidth: buttonWidth)
-            .fullScreenCover(isPresented: $showingHomeView) {
-                HomeView()
+        VStack(spacing: metrics.compact ? 10 : 14) {
+            Button(action: saveImgInGallery) {
+                ButtonLabel(title: strings.save, systemImage: "square.and.arrow.down", font: font)
             }
-
-            ReusableButton(title: "QR Code", action: {
-                // 이전 QR이 잠깐 보이지 않도록 초기화 후 업로드
-                viewModel.qrCodeImage = nil
-                showingQRView = true
-                viewModel.uploadImageAndGenerateQRCode(image: stripImage)
-            }, boxWidth: buttonWidth)
-            .sheet(isPresented: $showingQRView) {
-                QRCodeSheetView(viewModel: viewModel, showingHomeView: $showingHomeView, showingQRView: $showingQRView)
-            }
-
-            ReusableButton(title: "Save", action: saveImgInGallery, boxWidth: buttonWidth)
+            .buttonStyle(SecondaryButtonStyle(height: metrics.buttonHeight))
 
             // Long-press to pick a different printer
-            ReusableButton(title: isPrinting ? "Printing…" : "Print", action: {
-                printStrip()
-            }, boxWidth: buttonWidth)
+            Button { printStrip() } label: {
+                ButtonLabel(title: isPrinting ? strings.printing : strings.printCopies(session.printCopies),
+                            systemImage: "printer.fill", font: font)
+            }
+            .buttonStyle(PrimaryButtonStyle(height: metrics.buttonHeight))
             .disabled(isPrinting)
             .opacity(isPrinting ? 0.6 : 1)
             .contextMenu {
                 Button {
                     printStrip(choosePrinter: true)
                 } label: {
-                    Label("Change Printer…", systemImage: "printer")
+                    Label(strings.changePrinter, systemImage: "printer")
                 }
             }
-            Spacer()
+        }
+        .onChange(of: timeUp) { _, isUp in
+            if isUp { finishSession() }
         }
         .alert(item: $activeAlert) { alert in
             switch alert {
             case .message(let title, let message):
-                return Alert(title: Text(title), message: Text(message), dismissButton: .default(Text("OK")))
+                return Alert(title: Text(title), message: Text(message), dismissButton: .default(Text(strings.ok)))
             case .printerUnavailable:
                 return Alert(
-                    title: Text("Printer Not Found"),
-                    message: Text("Make sure the printer is on and connected to the same Wi-Fi as this iPad."),
-                    primaryButton: .default(Text("Choose Printer")) { printStrip(choosePrinter: true) },
+                    title: Text(strings.printerNotFoundTitle),
+                    message: Text(strings.printerNotFoundMessage),
+                    primaryButton: .default(Text(strings.choosePrinter)) { printStrip(choosePrinter: true) },
                     secondaryButton: .cancel()
                 )
             }
@@ -69,30 +68,52 @@ struct ButtonActionView: View {
     private func saveImgInGallery() {
         viewModel.saveImageToAlbum(image: stripImage) { success, error in
             if success {
-                activeAlert = .message(title: "Saved",
-                                       message: "Your photo strip was saved to your photo library.")
+                activeAlert = .message(title: strings.savedTitle, message: strings.savedMessage)
             } else {
-                activeAlert = .message(title: "Save Failed",
-                                       message: "Couldn't save to your photo library: \(error?.localizedDescription ?? "Unknown error")")
+                activeAlert = .message(title: strings.saveFailedTitle,
+                                       message: strings.saveFailedMessage(error?.localizedDescription ?? strings.unknownError))
             }
         }
     }
 
-    // 인쇄 (4×6 용지에 스트립 2장)
+    /// Time is up: print first if the guest never did (only with a remembered printer, so no
+    /// picker pops up), then go back to the start.
+    private func finishSession() {
+        if isPrinting {
+            goHomeAfterPrint = true
+        } else if !hasPrinted && StripPrinter.shared.hasSavedPrinter {
+            goHomeAfterPrint = true
+            printStrip()
+        } else {
+            session.reset()
+        }
+    }
+
+    // 인쇄 (4×6 용지 한 장에 스트립 2장)
     private func printStrip(choosePrinter: Bool = false) {
         isPrinting = true
-        StripPrinter.shared.print(strip: stripImage, choosePrinter: choosePrinter) { outcome in
+        StripPrinter.shared.print(strip: stripImage, copies: session.printCopies,
+                                  choosePrinter: choosePrinter) { outcome in
             isPrinting = false
+            if case .sent = outcome {
+                hasPrinted = true
+                // The thank-you screen returns home by itself.
+                onPrinted()
+                return
+            }
+            if goHomeAfterPrint {
+                session.reset()
+                return
+            }
             switch outcome {
             case .sent:
-                activeAlert = .message(title: "Printing",
-                                       message: "Your photo strips are on their way to the printer.")
+                break
             case .cancelled:
                 break
             case .printerUnavailable:
                 activeAlert = .printerUnavailable
             case .failed(let reason):
-                activeAlert = .message(title: "Print Failed", message: reason)
+                activeAlert = .message(title: strings.printFailedTitle, message: reason)
             }
         }
     }
@@ -112,15 +133,8 @@ private enum ActiveAlert: Identifiable {
 
 struct ButtonActionView_Previews: PreviewProvider {
     static var previews: some View {
-        StatefulPreviewWrapper(false) { showingHomeView in
-            StatefulPreviewWrapper(false) { showingQRView in
-                ButtonActionView(
-                    viewModel: ResultViewModel(),
-                    showingHomeView: showingHomeView,
-                    showingQRView: showingQRView,
-                    stripImage: UIImage()
-                )
-            }
-        }
+        ButtonActionView(viewModel: ResultViewModel(), stripImage: UIImage(), metrics: Metrics(width: 1000))
+            .padding()
+            .environmentObject(BoothSession())
     }
 }
